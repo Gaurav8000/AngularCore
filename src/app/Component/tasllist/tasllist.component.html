@@ -1,0 +1,252 @@
+<div class="app-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <mat-icon>rocket_launch</mat-icon>
+      </div>
+      <span class="brand-name">Tasker</span>
+    </div>
+    <nav class="nav-menu">
+      <a class="nav-item" [class.active]="activeNav === 'dashboard'" (click)="activeNav = 'dashboard'">
+        <mat-icon>dashboard</mat-icon>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" [class.active]="activeNav === 'tasks'" (click)="activeNav = 'tasks'">
+        <mat-icon>check_box</mat-icon>
+        <span>Tasks</span>
+      </a>
+      <a class="nav-item" [class.active]="activeNav === 'projects'" (click)="activeNav = 'projects'">
+        <mat-icon>folder_open</mat-icon>
+        <span>Projects</span>
+      </a>
+      <a class="nav-item" [class.active]="activeNav === 'reports'" (click)="activeNav = 'reports'">
+        <mat-icon>bar_chart</mat-icon>
+        <span>Reports</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="search-bar">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search tasks, projects..."
+          [(ngModel)]="searchQuery" (input)="applySearch()" />
+      </div>
+      <div class="topbar-actions">
+        <button mat-icon-button>
+          <mat-icon [matBadge]="notificationCount" matBadgeColor="warn">notifications</mat-icon>
+        </button>
+        <div class="user-chip">
+          <img src="https://i.pravatar.cc/32?img=5" alt="Admin" class="avatar" />
+          <span>Admin User</span>
+          <mat-icon>arrow_drop_down</mat-icon>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Task List</h1>
+        <p class="page-subtitle">Manage and track all enterprise tasks across your organization.</p>
+      </div>
+      <button mat-raised-button class="add-task-btn" (click)="openAddTaskDialog()">
+        <mat-icon>add</mat-icon>
+        Add New Task
+      </button>
+    </div>
+
+    <!-- TABLE CARD -->
+    <div class="table-card">
+
+      <!-- TABS + FILTER -->
+      <div class="tab-filter-row">
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex"
+          (selectedIndexChange)="onTabChange($event)" animationDuration="200ms">
+          <mat-tab label="All Tasks"></mat-tab>
+          <mat-tab label="Active"></mat-tab>
+          <mat-tab label="Completed"></mat-tab>
+        </mat-tab-group>
+        <button mat-stroked-button class="filter-btn" (click)="toggleFilterPanel()">
+          <mat-icon>filter_list</mat-icon>
+          Filter
+        </button>
+      </div>
+
+      <!-- FILTER PANEL -->
+      <div class="filter-panel" *ngIf="showFilterPanel">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Priority</mat-label>
+          <mat-select [(ngModel)]="filterPriority" (selectionChange)="applyFilters()">
+            <mat-option value="">All</mat-option>
+            <mat-option value="Critical">Critical</mat-option>
+            <mat-option value="High">High</mat-option>
+            <mat-option value="Medium">Medium</mat-option>
+            <mat-option value="Low">Low</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Assignee</mat-label>
+          <mat-select [(ngModel)]="filterAssignee" (selectionChange)="applyFilters()">
+            <mat-option value="">All</mat-option>
+            <mat-option *ngFor="let a of assignees" [value]="a">{{a}}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-button color="warn" (click)="clearFilters()">Clear</button>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="filteredTasks" matSort
+          (matSortChange)="onSortChange($event)" class="task-table">
+
+          <!-- Checkbox -->
+          <ng-container matColumnDef="completed">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let task">
+              <mat-checkbox [checked]="task.completed"
+                (change)="toggleComplete(task)" color="primary">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Task Name -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Task Name</th>
+            <td mat-cell *matCellDef="let task">
+              <div class="task-name-cell">
+                <span class="task-name" [class.completed]="task.completed">{{task.name}}</span>
+                <span class="task-dept">{{task.department}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Priority -->
+          <ng-container matColumnDef="priority">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Priority</th>
+            <td mat-cell *matCellDef="let task">
+              <span class="priority-badge" [ngClass]="'priority-' + task.priority.toLowerCase()">
+                {{task.priority}}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Assignee -->
+          <ng-container matColumnDef="assignee">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Assignee</th>
+            <td mat-cell *matCellDef="let task">
+              <div class="assignee-cell">
+                <img [src]="task.avatarUrl" [alt]="task.assignee" class="assignee-avatar" />
+                <span>{{task.assignee}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Due Date -->
+          <ng-container matColumnDef="dueDate">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Due Date</th>
+            <td mat-cell *matCellDef="let task">
+              <span [class.overdue]="isOverdue(task.dueDate) && !task.completed">
+                {{task.dueDate | date:'MMM dd, yyyy'}}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let task">
+              <div class="action-btns">
+                <button mat-icon-button class="action-icon edit"
+                  (click)="editTask(task)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button class="action-icon delete"
+                  (click)="deleteTask(task)" matTooltip="Delete">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            class="task-row" [class.row-completed]="row.completed">
+          </tr>
+
+          <!-- No Data -->
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell no-data-cell" [attr.colspan]="displayedColumns.length">
+              <div class="no-data">
+                <mat-icon>inbox</mat-icon>
+                <p>No tasks found</p>
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </div>
+
+      <!-- PAGINATOR -->
+      <div class="paginator-row">
+        <span class="showing-label">
+          Showing {{getShowingStart()}} to {{getShowingEnd()}} of {{filteredTasks.length}} tasks
+        </span>
+        <mat-paginator
+          [length]="filteredTasks.length"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="[5, 10, 20]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ═══ ADD / EDIT DIALOG ═══ -->
+<ng-template #taskDialog>
+  <h2 mat-dialog-title>{{editingTask ? 'Edit Task' : 'Add New Task'}}</h2>
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Task Name</mat-label>
+      <input matInput [(ngModel)]="dialogTask.name" placeholder="Enter task name" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Department</mat-label>
+      <input matInput [(ngModel)]="dialogTask.department" placeholder="Department" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Priority</mat-label>
+      <mat-select [(ngModel)]="dialogTask.priority">
+        <mat-option value="Critical">Critical</mat-option>
+        <mat-option value="High">High</mat-option>
+        <mat-option value="Medium">Medium</mat-option>
+        <mat-option value="Low">Low</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Assignee</mat-label>
+      <input matInput [(ngModel)]="dialogTask.assignee" placeholder="Assignee name" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Due Date</mat-label>
+      <input matInput [matDatepicker]="picker" [(ngModel)]="dialogTask.dueDate" />
+      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-raised-button color="primary" (click)="saveTask()">
+      {{editingTask ? 'Update' : 'Add'}} Task
+    </button>
+  </mat-dialog-actions>
+</ng-template>
