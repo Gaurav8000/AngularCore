@@ -15,11 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
     RouterOutlet,
     RouterLink,
 
-    MatSidenavModule,
-    MatToolbarModule,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule
+   
   ],
 
   templateUrl: './layout.component.html',
